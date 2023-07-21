@@ -45,7 +45,22 @@ Some actions (e.g. trying to clone, delete objects, or trying to Ctrl + A) may s
 Patching this out is easy enough, and allows to do these actions.
 * Open RobloxApp_studio.exe in a tool like IDA or [x32dbg](https://x64dbg.com/)
 * Open the strings tab, and search for "Insufficinet permissions" (with the spelling mistake)
-* Go to the address of the instruction
+* Go to the address of the instruction.
 * In the assembly, you should see a `test` instruction, followed by a `jne` instruction, usually right above the `push` instruction.
 * Patch the `jne` instruction to a `jmp` instruction.
 * Save the file.
+
+NOTE: This does not work for versions below 2008.
+The command bar and the Execute Script button do not have the permissions to do everything.
+It is simple enough to patch this out.  
+First, I recommend opening up Studio, and running `printidentity()` in the command bar and from a Doc script (Tools -> Execute Script...), and noting down the level.  
+* Open RobloxApp_studio.exe in a tool like IDA or [x32dbg](https://x64dbg.com/)
+* Open the strings tab, and search for "Doc script".
+* If nothing is found, search for "Studio.ashx" instead.
+* Go to the address of the instruction.
+* You should see a `push N` instruction (where N is a number) a few lines after. This is the identity.
+* Go to the next function called after the pushes, and get a list of references to that function.
+* For every reference, change the push value to a 6.
+* Create a backup, and then save the patched file. Try to open up Studio.
+* If it opens, open the output and command bar, and type `printidentity()`. You should see `Current identity is 6` in the output.
+* Attempt to create a Player with `print(Instance.new("Player"))`. If it errors or there is no output, then the identity value is different for your version (e.g. for 2009E, you should put 4 or 5). Otherwise, if you see output (usually just the text `Player`), you are good to go.
