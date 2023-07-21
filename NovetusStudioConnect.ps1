@@ -133,7 +133,9 @@ function Decrypt {
 }
 
 $data = $(Decrypt $(Get-Content "$client/clientinfo.nov")).Split("|")
-$validatedFiles = $(Select-String -InputObject $(Decrypt $data[$data.Length - 1]) -Pattern "<validate>" -AllMatches).Matches.Count
+$validatedFiles = $(Select-String -InputObject $(Decrypt $data[10]) -Pattern "<validate>" -AllMatches).Matches.Count
+$fix2007 = $(Decrypt $data[8]).ToLower() 
+
 $tripcode = ""
 
 for (($i = 0); $i -lt 56; $i++) {
@@ -153,8 +155,29 @@ for (($i = 0); $i -lt 56; $i++) {
 "Script MD5: $scriptMD5"
 "Launcher MD5: $launcherMD5"
 "Validated files: $validatedFiles`n"
- 
-"Final invoke:"
-"$client/RobloxApp_studio.exe -script `"dofile('rbxasset://scripts\\CSMPFunctions.lua') _G.CSConnect($($args[2]), '$($args[3])', $($args[4]), '$($args[1])', '$Hat1', '$Hat2', '$Hat3', '$Head', $TorsoColorID, $LeftArmColorID, $RightArmColorID, $LeftLegColorID, $RightLegColorID, '$TShirt', '$Shirt', '$Pants', '$Face', '$Head', '$Icon', '$Extra', '$clientMD5', '$launcherMD5', '$scriptMD5', '$tripcode', $validatedFiles, false)`""
 
-& "$client/RobloxApp_studio.exe" -script "dofile('rbxasset://scripts\\CSMPFunctions.lua') _G.CSConnect($($args[2]), '$($args[3])', $($args[4]), '$($args[1])', '$Hat1', '$Hat2', '$Hat3', '$Head', $TorsoColorID, $LeftArmColorID, $RightArmColorID, $LeftLegColorID, $RightLegColorID, '$TShirt', '$Shirt', '$Pants', '$Face', '$Head', '$Icon', '$Extra', '$clientMD5', '$launcherMD5', '$scriptMD5', '$tripcode', $validatedFiles, false)"
+$source = "dofile('rbxasset://scripts\\CSMPFunctions.lua') _G.CSConnect($($args[2]), '$($args[3])', $($args[4]), '$($args[1])', '$Hat1', '$Hat2', '$Hat3', $HeadColorID, $TorsoColorID, $LeftArmColorID, $RightArmColorID, $LeftLegColorID, $RightLegColorID, '$TShirt', '$Shirt', '$Pants', '$Face', '$Head', '$Icon', '$Extra', '$clientMD5', '$launcherMD5', '$scriptMD5', '$tripcode', $validatedFiles, false)"
+
+# 2007's -script parameter accepts files instead of a script source.
+# So we need to make a file, put our source in there, and then pass the file over
+if ($fix2007 -eq "true") {
+    $tempFile = $(New-TemporaryFile).FullName
+    
+    "Fixing 2007..."
+    "Created temporary file $tempFile"
+    "Temporary file source: $source`n"
+
+    # Attempting to just write the string will write it as UTF-16.
+    # We need a UTF-8 file, so the client can read it properly and not crash.
+    [System.IO.File]::WriteAllLines($tempFile, $source)
+
+    $cmdline = $tempFile
+}
+else {
+    $cmdline = $source
+}
+
+"Final invoke:"
+"$client/RobloxApp_studio.exe -script `"$cmdline`""
+
+& "$client/RobloxApp_studio.exe" -script "$cmdline"
