@@ -133,7 +133,7 @@ function Decrypt {
 }
 
 $data = $(Decrypt $(Get-Content "$client/clientinfo.nov")).Split("|")
-$validatedFiles = $(Select-String -InputObject $(Decrypt $data[10]) -Pattern "<validate>" -AllMatches).Matches.Count
+$validatedFiles = $(Select-String -InputObject $(Decrypt $data[$data.Length - 1]) -Pattern "<\s*validate\s*>" -AllMatches).Matches.Count
 $fix2007 = $(Decrypt $data[8]).ToLower() 
 
 $tripcode = ""
