@@ -55,12 +55,13 @@ The command bar and the Execute Script button do not have the permissions to do 
 It is simple enough to patch this out.  
 First, I recommend opening up Studio, and running `printidentity()` in the command bar and from a Doc script (Tools -> Execute Script...), and noting down the level.  
 * Open RobloxApp_studio.exe in a tool like IDA or [x32dbg](https://x64dbg.com/)
-* Open the strings tab, and search for "Doc script".
-* If nothing is found, search for "Studio.ashx" instead.
+* Open the strings tab, and search for `Doc script`.
+* If nothing is found, search for `Studio.ashx` instead.
 * Go to the address of the instruction.
 * You should see a `push N` instruction (where N is a number) a few lines after. This is the identity.
 * Go to the next function called after the pushes, and get a list of references to that function.
-* For every reference, change the push value to a 6.
+* For every reference, change the push value to a 6 (for 2009 and below, you should use 5).
+* If you searched for `Doc script`, do the same but for the string `Cmd`, as it is a different function.
 * Create a backup, and then save the patched file. Try to open up Studio.
-* If it opens, open the output and command bar, and type `printidentity()`. You should see `Current identity is 6` in the output.
-* Attempt to create a Player with `print(Instance.new("Player"))`. If it errors or there is no output, then the identity value is different for your version (e.g. for 2009E, you should put 4 or 5). Otherwise, if you see output (usually just the text `Player`), you are good to go.
+* If it opens, open the output and command bar, and type `printidentity()`. You should see `Current identity is 6` in the output. Attempt to create a Player with `print(Instance.new("Player"))`.
+    * If it errors, **does not open**, or there is no output, then the identity value is different for your version (e.g. for 2009E, you should put 4 or 5). Otherwise, if you see output (usually just the text `Player`), you are good to go.
