@@ -1,18 +1,18 @@
 # Vector4.new, 19/07/2023, rewritten 01/06/2024
 # A script allowing you to connect to Novetus servers with Studio tools.
 
-$ErrorActionPreference = "Stop"
-
 param(
     [Parameter(Mandatory, Position=0, HelpMessage="The client version to use.")] [string] $ClientVersion,
     [Parameter(Mandatory, Position=1, HelpMessage="The username of your player. Ignored in ghost mode.")] [string] $Username,
     [Parameter(Mandatory, Position=2, HelpMessage="The user ID of your player. Ignored in ghost mode.")] [int32] $UserID,
     [Parameter(Mandatory, Position=3, HelpMessage="The server IP to connect to.")] [string] $ServerIP,
     [Parameter(Mandatory, Position=4, HelpMessage="The server port.")] [uint16] $ServerPort,
-
+    
     [Parameter(HelpMessage="If set, does not create a player character, and just connects to the server.")] [switch] $Ghost,
     [Parameter(HelpMessage="If set, forces your tripcode to this value. Ignored in ghost mode.")] [string] $Tripcode
 )
+    
+$ErrorActionPreference = "Stop"
 
 $clientDirectory = "$PSScriptRoot/clients/$ClientVersion"
 
@@ -93,24 +93,25 @@ else {
 
 # generate tripcode if none was given and also validate any given ones
 if (!$Tripcode) {
+    $Tripcode = ""
+
     for (($i = 0); $i -lt 56; $i++) {
         $Tripcode += $("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" | Get-Random)
     }
 }
-else {
-    $Tripcode = $Tripcode.ToUpper()
 
-    if (($Tripcode | Select-String -Pattern "[^0-9A-F]") -or ($Tripcode.Length -ne 56)) {
-        "Tripcode is not in a valid format."
-        "Tripcodes must be 56 characters long, and only contain hex digits."
+$Tripcode = $Tripcode.ToUpper()
 
-        exit
-    }
+if (($Tripcode | Select-String -Pattern "[^0-9A-F]") -or ($Tripcode.Length -ne 56)) {
+    "Tripcode is not in a valid format."
+    "Tripcodes must be 56 characters long, and only contain hex digits."
+
+    exit
 }
 
-$clientMD5 = (Get-FileHash "$client/RobloxApp_client.exe" -Algorithm MD5).Hash
-$scriptMD5 = (Get-FileHash "$client/content/scripts/CSMPFunctions.lua" -Algorithm MD5).Hash
-$launcherMD5 = (Get-FileHash "$PSScriptRoot/bin/Novetus.exe" -Algorithm MD5).Hash
+$clientMD5 = $(Get-FileHash "$clientDirectory/RobloxApp_client.exe" -Algorithm MD5).Hash
+$scriptMD5 = $(Get-FileHash "$clientDirectory/content/scripts/CSMPFunctions.lua" -Algorithm MD5).Hash
+$launcherMD5 = $(Get-FileHash "$PSScriptRoot/bin/Novetus.exe" -Algorithm MD5).Hash
 
 # Decrypt the clientinfo.nov file
 Add-Type -AssemblyName System.Security
@@ -130,7 +131,7 @@ function Decrypt {
     return [System.Text.Encoding]::Unicode.GetString($outputBuffer)
 }
 
-$data = $(Decrypt $(Get-Content "$client/clientinfo.nov")).Split("|")
+$data = $(Decrypt $(Get-Content "$clientDirectory/clientinfo.nov")).Split("|")
 $validatedFiles = $(Select-String -InputObject $(Decrypt $data[$data.Length - 1]) -Pattern "<\s*validate\s*>" -AllMatches).Matches.Count
 $fix2007 = $(Decrypt $data[8]).ToLower() 
 
@@ -148,9 +149,47 @@ if (!$Ghost) {
 }
 else {
     "Ghost mode enabled, no player or security data."
+    "NOTE: Ghost mode WILL LEAK YOUR IP if they look in the NetworkServer object!`n"
 }
 
-$source = "dofile('rbxasset://scripts\\CSMPFunctions.lua') _G.CSConnect($($args[2]), '$($args[3])', $($args[4]), '$($args[1])', '$Hat1', '$Hat2', '$Hat3', $HeadColorID, $TorsoColorID, $LeftArmColorID, $RightArmColorID, $LeftLegColorID, $RightLegColorID, '$TShirt', '$Shirt', '$Pants', '$Face', '$Head', '$Icon', '$Extra', '$clientMD5', '$launcherMD5', '$scriptMD5', '$tripcode', $validatedFiles, false)"
+$connectCode = "_G.CSConnect($UserId, '$ServerIP', $ServerPort, '$Username', '$Hat1', '$Hat2', '$Hat3', $HeadColorID, $TorsoColorID, $LeftArmColorID, $RightArmColorID, $LeftLegColorID, $RightLegColorID, '$TShirt', '$Shirt', '$Pants', '$Face', '$Head', '$Icon', '$Extra', '$clientMD5', '$launcherMD5', '$scriptMD5', '$Tripcode', $validatedFiles, false)"
+
+if (!$Ghost) {
+    $source = "dofile('rbxasset://scripts\\CSMPFunctions.lua') $connectCode"
+}
+else {
+    $needPatch = $false
+
+    if (!(Test-Path -Path "$clientDirectory/content/scripts/NSC_CSMPFunctions.lua")) {
+        $needPatch = $true
+    }
+    else {
+        if (!(Get-Content -Path "$clientDirectory/content/scripts/NSC_CSMPFunctions.lua" -match "--CSMPMD5:[A-F0-9]{32}")) {
+            $needPatch = $true
+        }
+        else {
+            if ($Matches[0] -ne ((Get-FileHash -Path "$clientDirectory/content/scripts/CSMPFunctions.lua" -Algorithm MD5).Hash)) {
+                $needPatch = $true
+            }
+        }
+    }
+
+    if ($needPatch) {
+        # bad hack. we basically just remove any code that handles creating the player
+        $csmpSource = "$(Get-Content -Raw -Path "$clientDirectory/content/scripts/CSMPFunctions.lua")"
+
+        $csmpSource = "--CSMPMD5:$((Get-FileHash -Path "$clientDirectory/content/scripts/CSMPFunctions.lua" -Algorithm MD5).Hash)`n$csmpSource"
+
+        # this has multiple hits but its fine
+        $csmpSource = $csmpSource -replace "player\s*=\s","player = Instance.new(`"Model`") --"
+        $csmpSource = $csmpSource -replace ":SetSuperSafeChat",":children"
+        $csmpSource = $csmpSource -replace ".CharacterAppearance\s*=.*`n",":children()`n"
+
+        [System.IO.File]::WriteAllLines("$clientDirectory/content/scripts/NSC_CSMPFunctions.lua", $csmpSource)
+    }
+
+    $source += "dofile('rbxasset://scripts\\NSC_CSMPFunctions.lua') $connectCode"
+}
 
 # 2007's -script parameter accepts files instead of a script source.
 # So we need to make a file, put our source in there, and then pass the file over
@@ -159,7 +198,6 @@ if ($fix2007 -eq "true") {
     
     "Fixing 2007..."
     "Created temporary file $tempFile"
-    "Temporary file source: $source`n"
 
     # Attempting to just write the string will write it as UTF-16.
     # We need a UTF-8 file, so the client can read it properly and not crash.
@@ -172,6 +210,6 @@ else {
 }
 
 "Final invoke:"
-"$client/RobloxApp_studio.exe -script `"$cmdline`""
+"$clientDirectory/RobloxApp_studio.exe -script `"$cmdline`""
 
-& "$client/RobloxApp_studio.exe" -script "$cmdline"
+& "$clientDirectory/RobloxApp_studio.exe" -script "$cmdline"
