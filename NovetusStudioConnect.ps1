@@ -164,7 +164,7 @@ else {
         $needPatch = $true
     }
     else {
-        if (!(Get-Content -Path "$clientDirectory/content/scripts/NSC_CSMPFunctions.lua" -match "--CSMPMD5:[A-F0-9]{32}")) {
+        if (!((Get-Content -Raw -Path "$clientDirectory/content/scripts/NSC_CSMPFunctions.lua") -match "--CSMPMD5:[A-F0-9]{32}")) {
             $needPatch = $true
         }
         else {
