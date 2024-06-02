@@ -51,6 +51,14 @@ To use it, just simply add the `Ghost` switch when connecting:
 .\NovetusStudioConnect.ps1 <other arguments...> -Ghost
 ```
 
+## GUI disappearance
+Sometimes, such as when opening chat, your tools will break.  
+To fix this, open the chat, and **press enter** (do not click out of it, you do not need anything typed in it) to get your toolbar back.  
+Then, go to **File** -> **New**.  
+After the new place is opened, click on **File** -> **Close** to close your new file.  
+Press No when prompted.  
+You will return to the game with your tools back.
+
 # Studio Patching
 Patching Studio executables to support this is simple enough:  
 * Get [HxD](https://mh-nexus.de/en/hxd/)
