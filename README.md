@@ -5,7 +5,7 @@ A PowerShell script to connect to Novetus servers with Studio tools.
 Put the PowerShell script in the same folder as your Novetus installation (the one with NovetusBootstrapper.exe in it).  
 You also need a patched Studio executable. Instructions are below this section.
 
-Then, it's simply running (in PowerShell)
+Then, it's simply running (in PowerShell):
 
 ```ps1
 .\NovetusStudioConnect.ps1 "<client>" "<username>" <user ID> "<server IP>" <server Port>
@@ -25,11 +25,31 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass
 Note that tripcodes are randomized: you will have a different tripcode every time you join.  
 This can be good, to prevent tripcode bans, but will also fail with tripcode whitelists.  
 
+To fix this, you can add a `Tripcode` flag with a specific tripcode.  
+Tripcodes must be hex characters only, and it must be 56 characters long.  
+
+i.e.
+```ps1
+.\NovetusStudioConnect.ps1 "2010L" "Vector4" $(Get-Random) "147.185.221.16" 25704 -Tripcode "093C975EDB2DB8401522F7100689992A7509CC84EBFE8273D3CDFF96"
+```
+
 The script spawns you with your own Novetus outfit, although sometimes you will have to die once to load everything.  
 
 Some features may also be broken on Studio. 
-* The copy/paste/paste into actions do not work while in game.  
-* Conveyors may not function.
+* The copy/paste/paste into actions do not work while in game.
+* Inserting models from the toolbox (if available) do not work while in game.
+* Some studio actions (i.e. unanchoring, moving large models around) may not replicate, or may take multiple tries to replicate.
+
+# "Ghost" mode
+### **NOTE: This WILL LEAK YOUR IP if the server owner looks into the NetworkServer object!**
+
+The script has a feature to connect to a server without a player character.  
+This will allow you to be completely invisible to all players, and pan around as if you were in Studio mode.
+
+To use it, just simply add the `Ghost` switch when connecting:
+```ps1
+.\NovetusStudioConnect.ps1 <other arguments...> -Ghost
+```
 
 # Studio Patching
 Patching Studio executables to support this is simple enough:  
