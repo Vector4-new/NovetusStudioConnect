@@ -1,6 +1,8 @@
 # NovetusStudioConnect
 A PowerShell script to connect to Novetus servers with Studio tools.
 
+**NOTE: In the next release of Novetus, this exploit will be "patched," and I am not going through the effort of updating it. Most of the process is similar, but scripts are encoded differently, so you will have to figure that out.**
+
 # Usage
 Put the PowerShell script in the same folder as your Novetus installation (the one with NovetusBootstrapper.exe in it).  
 You also need a patched Studio executable. Instructions are below this section.
